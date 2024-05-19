@@ -1,41 +1,34 @@
-//src/lib/apollo-wrapper.ts
 "use client";
 
-import {
-  ApolloClient,
-  ApolloLink,
-  HttpLink,
-} from "@apollo/client";
-import {
-  ApolloNextAppProvider,
-  NextSSRApolloClient,
-  NextSSRInMemoryCache,
-  SSRMultipartLink,
-} from "@apollo/experimental-nextjs-app-support/ssr";
+import { NextSSRInMemoryCache } from "@apollo/experimental-nextjs-app-support/ssr";
+import { cacheExchange, createClient, fetchExchange, ssrExchange } from "urql";
 
-function makeClient() {
-  const httpLink = new HttpLink({
-      uri: "put your api endpoint here",
-  });
+const isServerSide = typeof window === 'undefined';
+const ssrCache = ssrExchange({
+  isClient: !isServerSide,
+});
 
-  return new NextSSRApolloClient({
-    cache: new NextSSRInMemoryCache(),
-    link:
-      typeof window === "undefined"
-        ? ApolloLink.from([
-            new SSRMultipartLink({
-              stripDefer: true,
-            }),
-            httpLink,
-          ])
-        : httpLink,
-  });
-}
+const client = createClient({
+  url: 'https://countries.trevorblades.com/',
+  exchanges: [cacheExchange, fetchExchange],
+});
 
-export function ApolloWrapper({ children }: React.PropsWithChildren) {
-  return (
-    <ApolloNextAppProvider makeClient={makeClient}>
-      {children}
-    </ApolloNextAppProvider>
-  );
-}
+
+export const QueryCountries = (code: string) => {
+  return  `
+  query {
+    continent(code: "${code}") {
+      code,
+      name,
+      countries {
+        name,
+        code,
+        emoji,
+        emojiU
+      }
+    }
+  }
+`;
+};
+
+export { client, ssrCache };
